@@ -2,9 +2,8 @@ import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { ArrowRight, Loader2, ShieldCheck, Stethoscope, Telescope } from "lucide-react";
 
 const Login = () => {
   const { signIn } = useAuth();
@@ -34,41 +33,98 @@ const Login = () => {
   };
 
   return (
-    <div className="app-shell relative flex min-h-screen items-center justify-center p-4">
-      <div className="pointer-events-none absolute -top-24 left-[10%] h-64 w-64 rounded-full bg-sky-200/35 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-24 right-[10%] h-72 w-72 rounded-full bg-blue-100/35 blur-3xl" />
+    <div className="app-shell relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-8">
+      <div className="pointer-events-none absolute left-[7%] top-[12%] h-40 w-40 rounded-full border border-primary/10 bg-primary/10 blur-2xl" />
+      <div className="pointer-events-none absolute bottom-[10%] right-[8%] h-56 w-56 rounded-full border border-accent/10 bg-accent/10 blur-3xl" />
 
-      <Card className="glass-panel w-full max-w-lg rounded-[30px] border shadow-[0_24px_80px_rgba(148,163,184,0.22)]">
-        <CardHeader className="space-y-2 pb-5 pt-7 text-center sm:pb-6 sm:pt-8">
-          <CardTitle className="text-2xl tracking-tight text-slate-900 sm:text-[1.5rem]">
-            Malaria Annual Reporting
-          </CardTitle>
-          <p className="text-sm text-slate-500 sm:text-base">Sign in to continue</p>
-        </CardHeader>
+      <div className="grid w-full max-w-6xl gap-6 lg:grid-cols-[1.2fr_0.9fr]">
+        <section className="glass-panel rounded-[2rem] p-6 sm:p-8 lg:p-10">
+          <div className="status-pill inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em]">
+            <ShieldCheck className="h-4 w-4" />
+            Directorate Workspace
+          </div>
 
-        <CardContent className="space-y-5 sm:space-y-6">
-          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
-            <Input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="h-11 rounded-xl bg-white/70 border-black/10 px-4 text-base text-slate-900 placeholder:text-slate-400 focus-visible:ring-sky-200 sm:h-11 sm:text-base"
-            />
+          <h1 className="font-display mt-6 max-w-3xl text-4xl leading-tight text-foreground sm:text-5xl">
+            Field intelligence for malaria reporting, shaped into one operational canvas.
+          </h1>
+          <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
+            A cleaner interface for annual reporting, monthly review, and administrative oversight across local and non-local case records.
+          </p>
 
-            <Input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="h-11 rounded-xl bg-white/70 border-black/10 px-4 text-base text-slate-900 placeholder:text-slate-400 focus-visible:ring-sky-200 sm:h-11 sm:text-base"
-            />
+          <div className="mt-8 grid gap-4 md:grid-cols-3">
+            {[
+              {
+                icon: <Stethoscope className="h-5 w-5" />,
+                title: "Case Review",
+                text: "Track reporting quality without losing district-level detail.",
+              },
+              {
+                icon: <Telescope className="h-5 w-5" />,
+                title: "Program Visibility",
+                text: "Surface the right numbers quickly for supervisors and admins.",
+              },
+              {
+                icon: <ShieldCheck className="h-5 w-5" />,
+                title: "Controlled Access",
+                text: "Keep editing, review, and administration separated by role.",
+              },
+            ].map((item) => (
+              <div key={item.title} className="report-surface rounded-[1.5rem] p-5">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
+                  {item.icon}
+                </div>
+                <h2 className="mt-4 font-display text-2xl text-foreground">{item.title}</h2>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.text}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="glass-panel rounded-[2rem] p-6 sm:p-8">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                Secure Sign In
+              </p>
+              <h2 className="font-display mt-2 text-3xl text-foreground">Malaria Annual Reporting</h2>
+            </div>
+            <div className="rounded-full border border-border/70 bg-card/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Authorized Users
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                Email
+              </label>
+              <Input
+                type="email"
+                placeholder="name@program.gov"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="field-shell h-12 rounded-2xl px-4 text-base text-foreground placeholder:text-muted-foreground focus-visible:ring-primary"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                Password
+              </label>
+              <Input
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="field-shell h-12 rounded-2xl px-4 text-base text-foreground placeholder:text-muted-foreground focus-visible:ring-primary"
+              />
+            </div>
 
             <Button
               type="submit"
-              className="h-11 w-full rounded-xl bg-slate-900 text-base text-white shadow-sm hover:bg-slate-800 sm:h-11 sm:text-base"
+              className="h-12 w-full rounded-2xl bg-primary text-base font-semibold text-primary-foreground shadow-[0_12px_30px_hsl(193_72%_25%_/_0.22)] hover:bg-primary/95"
               disabled={loading}
             >
               {loading ? (
@@ -77,32 +133,33 @@ const Login = () => {
                   Signing in...
                 </span>
               ) : (
-                "Sign In"
+                <span className="flex items-center justify-center gap-2">
+                  Continue to workspace
+                  <ArrowRight className="h-4 w-4" />
+                </span>
               )}
             </Button>
           </form>
 
-          <div className="rounded-2xl border border-black/20 bg-white/72 p-4  backdrop-blur sm:p-5">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500 sm:text-sm">
-              Demo credentials
+          <div className="report-surface mt-6 rounded-[1.5rem] p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+              Demo Credentials
             </p>
-            <div className="mt-2 space-y-1 text-xs text-slate-500 sm:text-sm">
+            <div className="mt-3 space-y-2 text-sm text-muted-foreground">
               <p>
-                <span className="font-semibold text-slate-900">Admin:</span>{" "}
-                admin@test.com / 123456
+                <span className="font-semibold text-foreground">Admin</span>: admin@test.com / 123456
               </p>
               <p>
-                <span className="font-semibold text-slate-900">SK:</span>{" "}
-                sk1@test.com / 123456
+                <span className="font-semibold text-foreground">SK</span>: sk1@test.com / 123456
               </p>
             </div>
           </div>
 
-          <p className="text-center text-[11px] text-slate-400 sm:text-xs">
-            Authorized access only. Contact Admin for account support.
+          <p className="mt-5 text-center text-xs leading-5 text-muted-foreground">
+            Authorized access only. Contact the system administrator for account support.
           </p>
-        </CardContent>
-      </Card>
+        </section>
+      </div>
     </div>
   );
 };

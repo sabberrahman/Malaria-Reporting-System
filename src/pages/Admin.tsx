@@ -34,17 +34,18 @@ const Admin = () => {
   }), []);
 
   const SectionCard = ({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) => (
-    <section className="rounded-xl border bg-white shadow-sm">
-      <div className="p-4 md:p-6 border-b">
-        <h2 className="text-base md:text-lg font-semibold text-gray-900 tracking-tight">{title}</h2>
-        {subtitle && <p className="text-xs md:text-sm text-gray-500 mt-1">{subtitle}</p>}
+    <section className="report-surface rounded-[1.75rem]">
+      <div className="border-b border-border/70 p-4 md:p-6">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">Admin Section</p>
+        <h2 className="font-display mt-2 text-2xl text-foreground md:text-[1.9rem]">{title}</h2>
+        {subtitle && <p className="mt-1 text-xs md:text-sm text-muted-foreground">{subtitle}</p>}
       </div>
       <div className="p-4 md:p-6">{children}</div>
     </section>
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-gray-100">
+    <div className="app-shell min-h-screen">
       <AppHeader
         title="Admin Panel"
         subtitle="Manage records, assignments, users, and master data from one responsive admin workspace."
@@ -73,9 +74,9 @@ const Admin = () => {
                 { id: "masterData",  icon: <Database className="h-5 w-5" />,     label: "Master Data",     color: "text-amber-600 bg-amber-50" },
               ] as { id: SectionKey; icon: React.ReactNode; label: string; color: string }[]).map((item) => (
                 <button key={item.id} onClick={() => setActiveSection(item.id)}
-                  className="flex flex-col items-center gap-2 p-4 rounded-xl border bg-white hover:bg-gray-50 shadow-sm transition-all hover:shadow-md text-center">
+                  className="report-surface flex flex-col items-center gap-2 rounded-[1.5rem] p-4 text-center transition-transform hover:-translate-y-0.5">
                   <div className={`p-2 rounded-lg ${item.color}`}>{item.icon}</div>
-                  <span className="text-xs font-medium text-gray-700">{item.label}</span>
+                  <span className="text-xs font-medium text-foreground">{item.label}</span>
                 </button>
               ))}
             </div>
