@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import type { User } from "@supabase/supabase-js";
+import type { Session, User } from "@supabase/supabase-js";
 
 type AppRole = "admin" | "sk";
 
@@ -26,6 +26,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const clearUserData = () => {
+    setUser(null);
+    setProfile(null);
+    setRole(null);
+  };
+
   const fetchUserData = async (userId: string) => {
     try {
       const [profileRes, roleRes] = await Promise.all([
@@ -47,33 +53,62 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    // Flag to avoid setState after unmount
     let mounted = true;
 
-    // 1. Set up auth state listener FIRST
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const syncSession = async (session: Session | null) => {
       if (!mounted) return;
+
       if (session?.user) {
         setUser(session.user);
         await fetchUserData(session.user.id);
       } else {
-        setUser(null);
-        setProfile(null);
-        setRole(null);
+        clearUserData();
       }
-      // Always clear loading when auth state is known
-      if (mounted) setLoading(false);
+    };
+
+    const initializeAuth = async () => {
+      if (!mounted) return;
+      setLoading(true);
+
+      try {
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession();
+
+        if (error) throw error;
+        await syncSession(session);
+      } catch (err) {
+        console.error("auth initialization error:", err);
+        if (!mounted) return;
+        clearUserData();
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
+
+      setLoading(true);
+
+      // Avoid async work directly inside the auth callback.
+      void (async () => {
+        try {
+          await syncSession(session);
+        } catch (err) {
+          console.error("auth state sync error:", err);
+          if (!mounted) return;
+          clearUserData();
+        } finally {
+          if (mounted) setLoading(false);
+        }
+      })();
     });
 
-    // 2. Then check existing session (triggers onAuthStateChange above on most versions,
-    //    but we call it explicitly as a safety net)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      // onAuthStateChange handles the state — this just ensures loading
-      // clears even if no auth event fires (e.g. no session at all)
-      if (!session && mounted) setLoading(false);
-    });
+    void initializeAuth();
 
     return () => {
       mounted = false;
