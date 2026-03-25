@@ -2,7 +2,21 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Loader2, RefreshCw, ChevronDown, ChevronUp, UserPlus } from "lucide-react";
+import { Loader2, RefreshCw, ChevronDown, ChevronUp, UserPlus, Shield, MapPin } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 interface Assignment { id: string; village_name: string; district_name: string; reporting_year: number; }
 
@@ -25,6 +39,8 @@ const UserManagement = () => {
   const [password, setPassword]     = useState("");
   const [role, setRole]             = useState("sk");
   const [submitting, setSubmitting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 10;
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -69,6 +85,7 @@ const UserManagement = () => {
           assignments: assignMap[p.user_id] || [],
         }))
       );
+      setCurrentPage(1);
     } catch (err: any) {
       toast({ title: "Load error", description: err.message, variant: "destructive" });
     } finally {
@@ -107,6 +124,11 @@ const UserManagement = () => {
       setSubmitting(false);
     }
   };
+
+  const totalPages = Math.max(1, Math.ceil(users.length / rowsPerPage));
+  const pageStart = (currentPage - 1) * rowsPerPage;
+  const pageUsers = users.slice(pageStart, pageStart + rowsPerPage);
+  const visibleRows = Array.from({ length: rowsPerPage }, (_, index) => pageUsers[index] ?? null);
 
   return (
     <div className="space-y-4">
@@ -167,40 +189,98 @@ const UserManagement = () => {
         {loading && <div className="px-4 py-8 text-center text-xs text-muted-foreground">Loading…</div>}
         {!loading && users.length === 0 && <div className="px-4 py-8 text-center text-xs text-muted-foreground">No users found</div>}
 
-        {users.map((u) => {
-          const isExpanded = expandedId === u.user_id;
-          return (
-            <div key={u.user_id} className="bg-white">
-              <div
-                className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 cursor-pointer"
-                onClick={() => setExpandedId(isExpanded ? null : u.user_id)}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`h-7 w-7 rounded-full flex items-center justify-center text-[11px] font-bold ${
-                    u.role === "admin" ? "bg-gray-900 text-white" : "bg-blue-100 text-blue-700"
-                  }`}>
-                    {(u.full_name || u.email || "?")[0].toUpperCase()}
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-900">{u.full_name || "—"}</p>
-                    <p className="text-[11px] text-gray-400">{u.email}</p>
+        {!loading && users.length > 0 && visibleRows.map((u, rowIndex) => {
+          if (!u) {
+            return (
+              <div key={`empty-${rowIndex}`} className="flex min-h-[72px] items-center justify-between bg-white/40 px-4 py-3">
+                <div className="flex items-center gap-3 opacity-0">
+                  <div className="h-9 w-9 rounded-full bg-slate-100" />
+                  <div className="space-y-2">
+                    <div className="h-3 w-28 rounded bg-slate-100" />
+                    <div className="h-2 w-36 rounded bg-slate-100" />
                   </div>
                 </div>
+              </div>
+            );
+          }
+
+          const isExpanded = expandedId === u.user_id;
+          const initials = (u.full_name || u.email || "?")
+            .split(" ")
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((part) => part[0]?.toUpperCase())
+            .join("") || "?";
+
+          return (
+            <div key={u.user_id} className="bg-white">
+              <div className="flex items-center justify-between px-4 py-3 hover:bg-gray-50">
+                <div className="flex items-center gap-3">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="rounded-full transition-transform hover:scale-[1.02]">
+                        <Avatar className="h-10 w-10 border border-slate-200">
+                          <AvatarFallback className={u.role === "admin" ? "bg-slate-900 text-white" : "bg-sky-100 text-sky-700"}>
+                            {initials}
+                          </AvatarFallback>
+                        </Avatar>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-72 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
+                      <div className="rounded-xl bg-slate-50 px-3 py-3">
+                        <p className="text-sm font-semibold text-slate-900">{u.full_name || "—"}</p>
+                        <p className="mt-1 text-xs text-slate-500">{u.email}</p>
+                        <p className="mt-2 text-[11px] uppercase tracking-wide text-slate-400">{u.role}</p>
+                      </div>
+                      <DropdownMenuItem className="mt-2 rounded-xl px-3 py-2.5" onClick={() => setExpandedId(isExpanded ? null : u.user_id)}>
+                        <UserPlus className="mr-2 h-4 w-4" />
+                        User details
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="rounded-xl px-3 py-2.5">
+                        <Shield className="mr-2 h-4 w-4" />
+                        Admin Dashboard
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="rounded-xl px-3 py-2.5">
+                        <MapPin className="mr-2 h-4 w-4" />
+                        Location options
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <button className="text-left" onClick={() => setExpandedId(isExpanded ? null : u.user_id)}>
+                    <p className="text-xs font-medium text-gray-900">{u.full_name || "—"}</p>
+                    <p className="text-[11px] text-gray-400">{u.email}</p>
+                  </button>
+                </div>
+
                 <div className="flex items-center gap-3">
                   <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${
                     u.role === "admin" ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-700 border border-gray-200"
                   }`}>{u.role}</span>
-                  {u.role === "sk" && (
-                    <>
-                      <span className="text-[11px] text-gray-400">{u.assignments.length} village{u.assignments.length !== 1 ? "s" : ""}</span>
-                      {isExpanded ? <ChevronUp className="h-3.5 w-3.5 text-gray-400" /> : <ChevronDown className="h-3.5 w-3.5 text-gray-400" />}
-                    </>
-                  )}
+                  <span className="text-[11px] text-gray-400">{u.assignments.length} village{u.assignments.length !== 1 ? "s" : ""}</span>
+                  <button onClick={() => setExpandedId(isExpanded ? null : u.user_id)}>
+                    {isExpanded ? <ChevronUp className="h-3.5 w-3.5 text-gray-400" /> : <ChevronDown className="h-3.5 w-3.5 text-gray-400" />}
+                  </button>
                 </div>
               </div>
 
-              {isExpanded && u.role === "sk" && (
+              {isExpanded && (
                 <div className="bg-gray-50 border-t px-4 py-3">
+                  <div className="mb-3 grid gap-2 rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-600 md:grid-cols-3">
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wide text-slate-400">Name</p>
+                      <p className="mt-1 font-medium text-slate-900">{u.full_name || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wide text-slate-400">Email</p>
+                      <p className="mt-1 font-medium text-slate-900">{u.email}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wide text-slate-400">Role</p>
+                      <p className="mt-1 font-medium capitalize text-slate-900">{u.role}</p>
+                    </div>
+                  </div>
+
                   {u.assignments.length === 0 ? (
                     <p className="text-xs text-gray-400 italic">No villages assigned. Go to Assign Villages to add.</p>
                   ) : (
@@ -225,6 +305,38 @@ const UserManagement = () => {
           );
         })}
       </div>
+
+      {users.length > 0 && (
+        <Pagination className="justify-end">
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setCurrentPage((prev) => Math.max(1, prev - 1));
+                }}
+                className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+              />
+            </PaginationItem>
+            <PaginationItem>
+              <span className="px-3 text-xs text-slate-500">
+                Page {currentPage} of {totalPages}
+              </span>
+            </PaginationItem>
+            <PaginationItem>
+              <PaginationNext
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setCurrentPage((prev) => Math.min(totalPages, prev + 1));
+                }}
+                className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
     </div>
   );
 };

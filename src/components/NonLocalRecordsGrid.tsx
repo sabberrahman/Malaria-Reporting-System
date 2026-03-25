@@ -18,6 +18,8 @@ import {
   getMonthTotal,
 } from "@/lib/monthUtils";
 import { Plus, Trash2, RefreshCw, Save } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 
 interface NonLocalRow {
   id: string;
@@ -61,6 +63,7 @@ const NonLocalRecordsGrid = () => {
   const isAdmin = role === "admin";
   const currentMonth = getDhakaMonth();
   const currentYear = getDhakaYear();
+  const isMobile = useIsMobile();
 
   const [year, setYear] = useState(currentYear);
   const [rows, setRows] = useState<NonLocalRow[]>([]);
@@ -68,6 +71,8 @@ const NonLocalRecordsGrid = () => {
   const [saving, setSaving] = useState(false);
   const [dirtyIds, setDirtyIds] = useState<Set<string>>(new Set());
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState<10 | 20 | 50 | -1>(10);
 
   // -------- Color Logic (No DB Change) --------
   const getMonthStatus = (value: number, monthIndex: number): CellStatus => {
@@ -111,6 +116,7 @@ const NonLocalRecordsGrid = () => {
       setRows(data || []);
       setDirtyIds(new Set());
       setDeletedIds([]);
+      setCurrentPage(1);
     } catch (err: any) {
       toast({ title: "Load error", description: err.message, variant: "destructive" });
     } finally {
@@ -150,6 +156,10 @@ const NonLocalRecordsGrid = () => {
 
     setRows((prev) => [...prev, newRow]);
     setDirtyIds((prev) => new Set(prev).add(newRow.id));
+    if (!isMobile) {
+      const nextPageSize = rowsPerPage === -1 ? rows.length + 1 : rowsPerPage;
+      setCurrentPage(Math.max(1, Math.ceil((rows.length + 1) / nextPageSize)));
+    }
   };
 
   const deleteRow = (id: string) => {
@@ -241,6 +251,14 @@ const NonLocalRecordsGrid = () => {
 
   const years = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
   const hasDirty = dirtyIds.size > 0 || deletedIds.length > 0;
+  const effectiveRowsPerPage = rowsPerPage === -1 ? rows.length || 1 : rowsPerPage;
+  const totalPages = isMobile ? 1 : Math.max(1, Math.ceil(rows.length / effectiveRowsPerPage));
+  const pagedRows = isMobile
+    ? rows
+    : rows.slice((currentPage - 1) * effectiveRowsPerPage, currentPage * effectiveRowsPerPage);
+  const visibleRows = isMobile
+    ? pagedRows
+    : [...pagedRows, ...Array.from({ length: Math.max(0, effectiveRowsPerPage - pagedRows.length) }, () => null)];
 
   return (
     <div className="space-y-4">
@@ -270,11 +288,31 @@ const NonLocalRecordsGrid = () => {
           <Button variant="outline" size="sm" onClick={addRow} className="h-9">
             <Plus className="h-4 w-4 mr-1" /> Add Row
           </Button>
+
+          {!isMobile && (
+            <Select
+              value={String(rowsPerPage)}
+              onValueChange={(value) => {
+                setRowsPerPage(Number(value) as 10 | 20 | 50 | -1);
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="h-9 w-[132px]">
+                <SelectValue placeholder="Rows" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10 rows</SelectItem>
+                <SelectItem value="20">20 rows</SelectItem>
+                <SelectItem value="50">50 rows</SelectItem>
+                <SelectItem value="-1">All rows</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </div>
 
-      <div className="rounded-xl border bg-slate-50/70 p-2 sm:p-3">
-        <div className="border border-slate-200 rounded-lg overflow-auto max-h-[calc(100vh-240px)] md:max-h-[calc(100vh-260px)] bg-white shadow-sm">
+      <div>
+        <div className="overflow-auto max-h-[calc(100vh-240px)] md:max-h-[calc(100vh-260px)] bg-white">
           <table className="w-max min-w-full text-xs border-collapse">
           <thead className="sticky top-0 z-10 bg-gray-50 border-b">
             <tr>
@@ -302,7 +340,8 @@ const NonLocalRecordsGrid = () => {
               </tr>
             )}
 
-            {rows.map((row) => (
+            {visibleRows.map((row, rowIndex) =>
+              row ? (
               <tr key={row.id} className="hover:bg-gray-50">
                 <td className="grid-td p-1 text-center">
                   <button
@@ -396,11 +435,55 @@ const NonLocalRecordsGrid = () => {
                   {getMonthTotal(row)}
                 </td>
               </tr>
-            ))}
+              ) : (
+              <tr key={`empty-nonlocal-${rowIndex}`} className="hidden md:table-row">
+                {Array.from({ length: 19 }, (_, cellIndex) => (
+                  <td key={cellIndex} className="grid-td text-transparent">.</td>
+                ))}
+              </tr>
+              ),
+            )}
           </tbody>
           </table>
         </div>
       </div>
+
+      {!isMobile && rows.length > 0 && (
+        <div className="flex flex-col gap-2 text-xs text-slate-500 md:flex-row md:items-center md:justify-between">
+          <p>
+            Showing page {currentPage} of {totalPages}. Total rows: {rows.length}.
+          </p>
+          <Pagination className="justify-end">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setCurrentPage((prev) => Math.max(1, prev - 1));
+                  }}
+                  className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                />
+              </PaginationItem>
+              <PaginationItem>
+                <span className="px-3 text-xs text-slate-500">
+                  {currentPage} / {totalPages}
+                </span>
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setCurrentPage((prev) => Math.min(totalPages, prev + 1));
+                  }}
+                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
     </div>
   );
 };

@@ -30,7 +30,7 @@ const AppHeader = ({
   return (
     <header className="sticky top-0 z-20 border-b bg-white/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-white/85">
       <div className="mx-auto flex w-full max-w-[1800px] flex-col gap-4 px-3 py-3 sm:px-4 md:px-6">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-3">
             {onBack && (
               <Button
@@ -47,11 +47,11 @@ const AppHeader = ({
 
             <div className="min-w-0">
               <h1 className="text-lg font-semibold tracking-tight text-gray-950 md:text-xl">{title}</h1>
-              {subtitle && <p className="mt-1 text-sm text-gray-600">{subtitle}</p>}
+              {subtitle && <p className="mt-1 hidden text-sm text-gray-600 md:block">{subtitle}</p>}
             </div>
           </div>
 
-          {actions && <div className="flex flex-wrap items-center gap-2 lg:justify-end">{actions}</div>}
+          {actions && <div className="ml-auto flex shrink-0 items-center justify-end gap-2">{actions}</div>}
         </div>
 
         {navItems && navItems.length > 0 && (
