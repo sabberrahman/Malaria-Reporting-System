@@ -4,23 +4,22 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
-import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
+const PublicDashboardRoute = () => {
+  const { loading } = useAuth();
+
   if (loading) {
     return (
       <div className="app-shell flex min-h-screen items-center justify-center px-6">
         <div className="glass-panel w-full max-w-md rounded-[2rem] p-8 text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-            System Check
+            Public Access
           </p>
-          <h1 className="font-display mt-3 text-3xl text-foreground">Preparing reporting workspace</h1>
+          <h1 className="font-display mt-3 text-3xl text-foreground">Opening reporting register</h1>
           <div className="mx-auto mt-6 h-1.5 w-40 overflow-hidden rounded-full bg-secondary">
             <div className="h-full w-1/2 animate-pulse rounded-full bg-primary" />
           </div>
@@ -28,29 +27,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       </div>
     );
   }
-  if (!user) return <Navigate to="/login" replace />;
-  return <>{children}</>;
-};
 
-const PublicRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
-  if (loading) {
-    return (
-      <div className="app-shell flex min-h-screen items-center justify-center px-6">
-        <div className="glass-panel w-full max-w-md rounded-[2rem] p-8 text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-            Verifying Access
-          </p>
-          <h1 className="font-display mt-3 text-3xl text-foreground">Preparing secure sign in</h1>
-          <div className="mx-auto mt-6 h-1.5 w-40 overflow-hidden rounded-full bg-secondary">
-            <div className="h-full w-1/2 animate-pulse rounded-full bg-accent" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-  if (user) return <Navigate to="/" replace />;
-  return <>{children}</>;
+  return <Dashboard />;
 };
 
 const App = () => (
@@ -61,9 +39,9 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
-            <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-            <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+            <Route path="/" element={<PublicDashboardRoute />} />
+            <Route path="/login" element={<Navigate to="/" replace />} />
+            <Route path="/admin" element={<Navigate to="/" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

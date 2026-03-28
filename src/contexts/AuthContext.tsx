@@ -20,6 +20,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const DEFAULT_PUBLIC_EMAIL = "sk1@test.com";
+const DEFAULT_PUBLIC_PASSWORD = "123456";
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -33,23 +36,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const fetchUserData = async (userId: string) => {
-    try {
-      const [profileRes, roleRes] = await Promise.all([
-        supabase.from("profiles").select("full_name, email").eq("user_id", userId).maybeSingle(),
-        supabase.from("user_roles").select("role").eq("user_id", userId).maybeSingle(),
-      ]);
+    const [profileRes, roleRes] = await Promise.all([
+      supabase.from("profiles").select("full_name, email").eq("user_id", userId).maybeSingle(),
+      supabase.from("user_roles").select("role").eq("user_id", userId).maybeSingle(),
+    ]);
 
-      // Log errors but don't crash — rows may not exist yet
-      if (profileRes.error) console.warn("profiles fetch error:", profileRes.error.message);
-      if (roleRes.error) console.warn("user_roles fetch error:", roleRes.error.message);
-
-      setProfile(profileRes.data ?? null);
-      setRole((roleRes.data?.role as AppRole) ?? null);
-    } catch (err) {
-      console.error("fetchUserData unexpected error:", err);
-      setProfile(null);
-      setRole(null);
+    if (profileRes.error) {
+      throw profileRes.error;
     }
+
+    if (roleRes.error) {
+      throw roleRes.error;
+    }
+
+    setProfile(profileRes.data ?? null);
+    setRole((roleRes.data?.role as AppRole) ?? null);
   };
 
   useEffect(() => {
@@ -58,33 +59,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const syncSession = async (session: Session | null) => {
       if (!mounted) return;
 
-      if (session?.user) {
-        setUser(session.user);
-        await fetchUserData(session.user.id);
-      } else {
+      if (!session?.user) {
         clearUserData();
+        return;
       }
+
+      setUser(session.user);
+      await fetchUserData(session.user.id);
     };
 
-    const initializeAuth = async () => {
-      if (!mounted) return;
-      setLoading(true);
+    const ensureDefaultSession = async () => {
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.getSession();
 
-      try {
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession();
-
-        if (error) throw error;
-        await syncSession(session);
-      } catch (err) {
-        console.error("auth initialization error:", err);
-        if (!mounted) return;
-        clearUserData();
-      } finally {
-        if (mounted) setLoading(false);
+      if (error) {
+        throw error;
       }
+
+      if (session?.user) {
+        await syncSession(session);
+        return;
+      }
+
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email: DEFAULT_PUBLIC_EMAIL,
+        password: DEFAULT_PUBLIC_PASSWORD,
+      });
+
+      if (signInError) {
+        throw signInError;
+      }
+
+      await syncSession(data.session ?? null);
     };
 
     const {
@@ -92,14 +100,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!mounted) return;
 
-      setLoading(true);
-
-      // Avoid async work directly inside the auth callback.
       void (async () => {
         try {
           await syncSession(session);
-        } catch (err) {
-          console.error("auth state sync error:", err);
+        } catch (error) {
+          console.error("auth state sync error:", error);
           if (!mounted) return;
           clearUserData();
         } finally {
@@ -108,7 +113,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })();
     });
 
-    void initializeAuth();
+    void (async () => {
+      try {
+        await ensureDefaultSession();
+      } catch (error) {
+        console.error("public auto sign-in error:", error);
+        if (!mounted) return;
+        clearUserData();
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
 
     return () => {
       mounted = false;
@@ -126,10 +141,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (error) throw error;
   };
 
+  const value: AuthContextType = {
+    user,
+    profile,
+    role,
+    loading,
+    signIn,
+    signOut,
+  };
+
   return (
-    <AuthContext.Provider value={{ user, profile, role, loading, signIn, signOut }}>
-      {children}
-    </AuthContext.Provider>
+    <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
   );
 };
 

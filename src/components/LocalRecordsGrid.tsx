@@ -96,7 +96,6 @@ const LocalRecordsGrid = () => {
   };
 
   const fetchData = useCallback(async () => {
-    if (!user) return;
     setLoading(true);
     try {
       let query = supabase
@@ -121,6 +120,12 @@ const LocalRecordsGrid = () => {
         .order("created_at");
 
       if (!isAdmin) {
+        if (!user) {
+          setRows([]);
+          setDirtyIds(new Set());
+          setCurrentPage(1);
+          return;
+        }
         query = query.eq("sk_user_id", user.id);
       }
 

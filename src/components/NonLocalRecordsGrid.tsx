@@ -97,7 +97,6 @@ const NonLocalRecordsGrid = () => {
   };
 
   const fetchData = useCallback(async () => {
-    if (!user) return;
     setLoading(true);
     try {
       let query = supabase
@@ -107,6 +106,13 @@ const NonLocalRecordsGrid = () => {
         .order("created_at");
 
       if (!isAdmin) {
+        if (!user) {
+          setRows([]);
+          setDirtyIds(new Set());
+          setDeletedIds([]);
+          setCurrentPage(1);
+          return;
+        }
         query = query.eq("sk_user_id", user.id);
       }
 
@@ -285,7 +291,7 @@ const NonLocalRecordsGrid = () => {
             <Save className="h-4 w-4 mr-1" /> Save
           </Button>
 
-          <Button variant="outline" size="sm" onClick={addRow} className="h-9">
+          <Button variant="outline" size="sm" onClick={addRow} disabled={!user} className="h-9">
             <Plus className="h-4 w-4 mr-1" /> Add Row
           </Button>
 
